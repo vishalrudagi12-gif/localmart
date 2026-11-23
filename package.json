@@ -1,0 +1,7 @@
+{
+  "name": "localbazaar-monorepo",
+  "private": true,
+  "scripts": {
+    "build": "cd LocalBazarFrontend/LocalBazarFrontend/frontend && npm install && npm run build"
+  }
+}

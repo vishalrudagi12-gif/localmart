@@ -1,4 +1,7 @@
 {
+  "buildCommand": "cd LocalBazarFrontend/LocalBazarFrontend/frontend && npm install && npm run build",
+  "outputDirectory": "LocalBazarFrontend/LocalBazarFrontend/frontend/dist",
+  "framework": "vite",
   "rewrites": [
     {
       "source": "/(.*)",
