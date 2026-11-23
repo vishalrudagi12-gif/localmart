@@ -123,70 +123,77 @@ export default function OrdersPage() {
       )}
 
       <ul className="space-y-4">
-        {orders.map((o) => (
-          <li key={o.id} className="card-base p-5 space-y-4 hover:border-slate-300 transition">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-bold text-slate-900">Order #{o.id}</span>
-                  <span className="text-xs text-slate-500 font-medium">· from {o.shopName}</span>
+        {orders.map((o) => {
+          const orderTotal = Number(o.totalAmount ?? o.total ?? 0);
+          return (
+            <li key={o.id} className="card-base p-5 space-y-4 hover:border-slate-300 transition">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base font-bold text-slate-900">Order #{o.id}</span>
+                    <span className="text-xs text-slate-500 font-medium">· from {o.shopName || 'Local Maker'}</span>
+                  </div>
+                  {o.createdAt && (
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Placed on {new Date(o.createdAt).toLocaleString()}
+                    </p>
+                  )}
                 </div>
-                {o.createdAt && (
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Placed on {new Date(o.createdAt).toLocaleString()}
-                  </p>
-                )}
+                <StatusBadge status={o.status} />
               </div>
-              <StatusBadge status={o.status} />
-            </div>
 
-            {/* Stepper Timeline */}
-            <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100">
-              <StepTimeline status={o.status} />
-            </div>
+              {/* Stepper Timeline */}
+              <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100">
+                <StepTimeline status={o.status} />
+              </div>
 
-            {/* Line items list */}
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Ordered Items</p>
-              <ul className="divide-y divide-slate-100">
-                {o.items.map((item) => (
-                  <li key={item.productId} className="flex items-center justify-between py-2 text-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-bazaar-50 border border-slate-200">
-                        {item.imageUrl ? (
-                          <img src={resolveImageUrl(item.imageUrl)} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-[10px] font-bold text-bazaar-700">
-                            Item
+              {/* Line items list */}
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Ordered Items</p>
+                <ul className="divide-y divide-slate-100">
+                  {(o.items || []).map((item, idx) => {
+                    const price = Number(item.unitPrice ?? item.price ?? 0);
+                    const qty = Number(item.quantity) || 1;
+                    return (
+                      <li key={item.productId || idx} className="flex items-center justify-between py-2 text-sm">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-bazaar-50 border border-slate-200">
+                            {item.imageUrl ? (
+                              <img src={resolveImageUrl(item.imageUrl)} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-[10px] font-bold text-bazaar-700">
+                                Item
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      <div>
-                        <Link
-                          to={`/products/${item.productId}`}
-                          className="font-semibold text-slate-800 hover:text-bazaar-700 hover:underline"
-                        >
-                          {item.name}
-                        </Link>
-                        <p className="text-xs text-slate-400">Qty: {item.quantity}</p>
-                      </div>
-                    </div>
-                    <span className="font-bold text-slate-900">
-                      ₹{(Number(item.unitPrice) * item.quantity).toFixed(2)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                          <div>
+                            <Link
+                              to={`/products/${item.productId}`}
+                              className="font-semibold text-slate-800 hover:text-bazaar-700 hover:underline"
+                            >
+                              {item.name}
+                            </Link>
+                            <p className="text-xs text-slate-400">Qty: {qty}</p>
+                          </div>
+                        </div>
+                        <span className="font-bold text-slate-900">
+                          ₹{(price * qty).toFixed(2)}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
-              <p>📍 <span className="font-semibold text-slate-700">Ship to:</span> {o.shippingAddress}</p>
-              <p className="text-base font-black text-slate-900 self-end sm:self-auto">
-                Total: <span className="text-bazaar-800">₹{Number(o.totalAmount).toFixed(2)}</span>
-              </p>
-            </div>
-          </li>
-        ))}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
+                <p>📍 <span className="font-semibold text-slate-700">Ship to:</span> {o.shippingAddress || 'Registered Address'}</p>
+                <p className="text-base font-black text-slate-900 self-end sm:self-auto">
+                  Total: <span className="text-bazaar-800">₹{orderTotal.toFixed(2)}</span>
+                </p>
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

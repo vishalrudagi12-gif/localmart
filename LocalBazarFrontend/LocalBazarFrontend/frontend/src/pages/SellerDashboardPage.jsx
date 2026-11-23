@@ -258,27 +258,27 @@ export default function SellerDashboardPage() {
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="card-base p-5 bg-gradient-to-br from-white to-bazaar-50/50">
             <span className="text-xs uppercase font-bold text-slate-400 tracking-wider">Sales Today</span>
-            <p className="mt-2 text-3xl font-black text-bazaar-900">₹{Number(stats.salesToday).toFixed(2)}</p>
-            <p className="mt-1 text-xs text-slate-500 font-medium">{stats.ordersToday} order{stats.ordersToday === 1 ? '' : 's'} placed today</p>
+            <p className="mt-2 text-3xl font-black text-bazaar-900">₹{(Number(stats.salesToday ?? stats.totalSales) || 0).toFixed(2)}</p>
+            <p className="mt-1 text-xs text-slate-500 font-medium">{stats.ordersToday ?? 0} order{stats.ordersToday === 1 ? '' : 's'} placed today</p>
           </div>
 
           <div className="card-base p-5 bg-gradient-to-br from-white to-sky-50/40">
             <span className="text-xs uppercase font-bold text-slate-400 tracking-wider">This Week</span>
-            <p className="mt-2 text-3xl font-black text-slate-900">₹{Number(stats.salesWeek).toFixed(2)}</p>
-            <p className="mt-1 text-xs text-slate-500 font-medium">{stats.ordersWeek} total order{stats.ordersWeek === 1 ? '' : 's'}</p>
+            <p className="mt-2 text-3xl font-black text-slate-900">₹{(Number(stats.salesWeek) || 0).toFixed(2)}</p>
+            <p className="mt-1 text-xs text-slate-500 font-medium">{stats.ordersWeek ?? 0} total order{stats.ordersWeek === 1 ? '' : 's'}</p>
           </div>
 
           <div className="card-base p-5 bg-gradient-to-br from-white to-indigo-50/40">
             <div className="flex items-center justify-between">
               <span className="text-xs uppercase font-bold text-slate-400 tracking-wider">This Month</span>
-              {stats.pendingOrders > 0 && (
+              {(stats.pendingOrders > 0) && (
                 <span className="rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5">
                   {stats.pendingOrders} pending
                 </span>
               )}
             </div>
-            <p className="mt-2 text-3xl font-black text-slate-900">₹{Number(stats.salesMonth).toFixed(2)}</p>
-            <p className="mt-1 text-xs text-slate-500 font-medium">{stats.ordersMonth} orders this month</p>
+            <p className="mt-2 text-3xl font-black text-slate-900">₹{(Number(stats.salesMonth) || 0).toFixed(2)}</p>
+            <p className="mt-1 text-xs text-slate-500 font-medium">{stats.ordersMonth ?? 0} orders this month</p>
           </div>
         </div>
       )}
@@ -343,35 +343,41 @@ export default function SellerDashboardPage() {
           </div>
         ) : (
           <ul className="mt-4 space-y-3.5">
-            {orders.map((o) => (
-              <li key={o.id} className="rounded-2xl border border-slate-200/90 bg-white p-[1.125rem] shadow-2xs hover:border-slate-300 transition">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                  <div>
-                    <span className="text-base font-bold text-slate-900">
-                      Order #{o.id}
-                    </span>
-                    <span className="ml-2 text-sm text-slate-500 font-medium">
-                      from {o.customerName}
-                    </span>
-                    <span className="ml-3 font-bold text-bazaar-800">
-                      ₹{Number(o.totalAmount).toFixed(2)}
-                    </span>
-                  </div>
-                  <StatusBadge status={o.status} />
-                </div>
-
-                <div className="mt-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500">
-                  <p>📍 <span className="font-medium text-slate-700">Ship to:</span> {o.shippingAddress}</p>
-                </div>
-
-                <div className="mt-2.5 rounded-xl bg-slate-50/70 p-2.5 text-xs text-slate-700 font-medium space-y-1">
-                  {o.items.map((item) => (
-                    <div key={item.productId} className="flex justify-between">
-                      <span>• {item.name} × <strong className="text-slate-900">{item.quantity}</strong></span>
-                      <span>₹{(Number(item.unitPrice) * item.quantity).toFixed(2)}</span>
+            {orders.map((o) => {
+              const orderTotal = Number(o.totalAmount ?? o.total ?? 0);
+              return (
+                <li key={o.id} className="rounded-2xl border border-slate-200/90 bg-white p-[1.125rem] shadow-2xs hover:border-slate-300 transition">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                    <div>
+                      <span className="text-base font-bold text-slate-900">
+                        Order #{o.id}
+                      </span>
+                      <span className="ml-2 text-sm text-slate-500 font-medium">
+                        from {o.customerName || 'Customer'}
+                      </span>
+                      <span className="ml-3 font-bold text-bazaar-800">
+                        ₹{orderTotal.toFixed(2)}
+                      </span>
                     </div>
-                  ))}
-                </div>
+                    <StatusBadge status={o.status} />
+                  </div>
+
+                  <div className="mt-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500">
+                    <p>📍 <span className="font-medium text-slate-700">Ship to:</span> {o.shippingAddress || 'Local Address'}</p>
+                  </div>
+
+                  <div className="mt-2.5 rounded-xl bg-slate-50/70 p-2.5 text-xs text-slate-700 font-medium space-y-1">
+                    {(o.items || []).map((item, idx) => {
+                      const price = Number(item.unitPrice ?? item.price ?? 0);
+                      const qty = Number(item.quantity) || 1;
+                      return (
+                        <div key={item.productId || idx} className="flex justify-between">
+                          <span>• {item.name} × <strong className="text-slate-900">{qty}</strong></span>
+                          <span>₹{(price * qty).toFixed(2)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
 
                 <div className="mt-3.5 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
                   {(NEXT[o.status] || []).map((action) => (
@@ -388,7 +394,8 @@ export default function SellerDashboardPage() {
                   ))}
                 </div>
               </li>
-            ))}
+            );
+          })}
           </ul>
         )}
       </div>

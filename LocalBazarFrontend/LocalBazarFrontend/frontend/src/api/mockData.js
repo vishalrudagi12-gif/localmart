@@ -259,48 +259,138 @@ export function getMockResponse(path, method = 'GET', body = null) {
   // 10. Seller Dashboard Stats
   if (cleanPath === '/dashboard/seller') {
     return {
-      totalSales: 4890,
-      totalOrders: 14,
+      salesToday: 594.0,
+      ordersToday: 2,
+      salesWeek: 3840.0,
+      ordersWeek: 12,
+      salesMonth: 14890.0,
+      ordersMonth: 48,
+      pendingOrders: 1,
+      totalSales: 14890.0,
+      totalOrders: 48,
       totalProducts: DEMO_PRODUCTS.length,
+      topProducts: [
+        { productId: 1, name: 'Handmade Crochet Sunflower', revenue: 4455, quantitySold: 15 },
+        { productId: 4, name: 'Beeswax Candle', revenue: 2093, quantitySold: 7 },
+        { productId: 5, name: 'Jute Tote Bag', revenue: 5586, quantitySold: 14 },
+      ],
+      lowStock: [
+        { id: 4, name: 'Beeswax Candle', quantity: 7 },
+        { id: 26, name: 'Vacuum Cleaner 4-in-1', quantity: 3 },
+      ],
       recentOrders: [
-        { id: 101, customerName: 'Rohan Sharma', total: 696, status: 'DELIVERED', date: '2026-11-20' },
-        { id: 102, customerName: 'Bhavana M', total: 297, status: 'SHIPPED', date: '2026-11-21' },
+        { id: 101, customerName: 'Rohan Sharma', totalAmount: 696, total: 696, status: 'DELIVERED', date: '2026-11-20' },
+        { id: 102, customerName: 'Bhavana M', totalAmount: 297, total: 297, status: 'SHIPPED', date: '2026-11-21' },
       ],
     };
   }
 
   // 11. Orders
   if (cleanPath === '/orders' || cleanPath === '/orders/mine' || cleanPath === '/orders/customer' || cleanPath === '/orders/seller') {
+    const STORAGE_KEY = 'lb_demo_orders';
+    const getSavedOrders = () => {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          const val = localStorage.getItem(STORAGE_KEY);
+          if (val) return JSON.parse(val);
+        } catch {}
+      }
+      return [
+        {
+          id: 102,
+          status: 'SHIPPED',
+          createdAt: '2026-11-21T10:00:00Z',
+          totalAmount: 297.0,
+          total: 297.0,
+          shopName: 'City Crafts',
+          shippingAddress: '12 Demo Street, Pune 411001',
+          customerName: 'Bhavana M',
+          items: [
+            {
+              productId: 1,
+              name: 'Handmade Crochet Sunflower',
+              unitPrice: 297.0,
+              price: 297.0,
+              quantity: 1,
+              imageUrl: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&auto=format&fit=crop&q=80',
+            },
+          ],
+        },
+      ];
+    };
+
+    const saveOrders = (arr) => {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+        } catch {}
+      }
+    };
+
     if (method === 'POST') {
-      return {
-        id: 103,
-        status: 'CONFIRMED',
-        total: body?.total || 297,
+      const current = getSavedOrders();
+      const rawItems = Array.isArray(body?.items) ? body.items : [];
+      const detailedItems = rawItems.map((raw) => {
+        const prod = DEMO_PRODUCTS.find((p) => p.id === Number(raw.productId)) || {};
+        const unitPrice = Number(raw.unitPrice ?? raw.price ?? prod.price ?? 297);
+        const quantity = Number(raw.quantity) || 1;
+        return {
+          productId: Number(raw.productId || prod.id || 1),
+          name: raw.name || prod.name || 'Handmade Item',
+          unitPrice,
+          price: unitPrice,
+          quantity,
+          imageUrl: raw.imageUrl || prod.imageUrls?.[0] || 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&auto=format&fit=crop&q=80',
+        };
+      });
+
+      const totalAmount = detailedItems.length > 0
+        ? detailedItems.reduce((acc, it) => acc + it.unitPrice * it.quantity, 0)
+        : Number(body?.total || body?.totalAmount || 297);
+
+      const nextId = current.length > 0 ? Math.max(...current.map((o) => o.id || 0)) + 1 : 103;
+      const matchedProd = detailedItems.length > 0
+        ? DEMO_PRODUCTS.find((p) => p.id === detailedItems[0].productId)
+        : null;
+
+      const newOrder = {
+        id: nextId,
+        status: 'PENDING',
+        totalAmount,
+        total: totalAmount,
+        shopName: matchedProd?.shopName || 'City Crafts',
+        shippingAddress: body?.shippingAddress || '12 Demo Street, Pune 411001',
+        customerName: 'Demo Customer',
         createdAt: new Date().toISOString(),
-        items: body?.items || [],
+        items: detailedItems,
       };
+
+      current.unshift(newOrder);
+      saveOrders(current);
+      return newOrder;
     }
-    return [
-      {
-        id: 102,
-        status: 'SHIPPED',
-        createdAt: '2026-11-21T10:00:00Z',
-        total: 297,
-        items: [
-          {
-            productId: 1,
-            name: 'Handmade Crochet Sunflower',
-            price: 297,
-            quantity: 1,
-            imageUrl: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&auto=format&fit=crop&q=80',
-          },
-        ],
-      },
-    ];
+
+    return getSavedOrders();
   }
 
-  if (cleanPath.startsWith('/orders/') && method === 'PATCH') {
-    return { id: 102, status: body?.status || 'DELIVERED' };
+  if (cleanPath.startsWith('/orders/') && (method === 'PATCH' || method === 'PUT')) {
+    const id = Number(cleanPath.replace('/orders/', '').split('/')[0]);
+    const STORAGE_KEY = 'lb_demo_orders';
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const val = localStorage.getItem(STORAGE_KEY);
+        if (val) {
+          const arr = JSON.parse(val);
+          const found = arr.find((o) => o.id === id);
+          if (found) {
+            found.status = body?.status || 'DELIVERED';
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+            return found;
+          }
+        }
+      } catch {}
+    }
+    return { id: id || 102, status: body?.status || 'DELIVERED' };
   }
 
   // 12. Admin Sellers
